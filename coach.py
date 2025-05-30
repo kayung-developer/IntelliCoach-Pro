@@ -7,6 +7,9 @@ import secrets
 import datetime
 import re
 import logging
+import random
+
+from numpy import var
 
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO)
@@ -16,86 +19,269 @@ logger = logging.getLogger(__name__)
 DB_NAME = "career_coach.db"
 USER_CONTEXT = {}  # In-memory store for conversation context: session_id -> {'data': dict, 'history_summary': str}
 
-# Enhanced Career Data
+# Enhanced Career Data with Tech and Non-Tech Roles
 CAREER_PATHS = {
     "software_engineer": {
         "name": "Software Engineer",
-        "keywords": ["software engineer", "developer", "coder", "programmer", "swe"],
-        "responsibilities_summary": "Designs, develops, tests, and maintains software applications. Collaborates with teams to build scalable and efficient solutions.",
+        "keywords": ["software engineer", "developer", "coder", "programmer", "swe", "backend developer",
+                     "frontend developer", "full stack developer"],
+        "responsibilities_summary": "Designs, develops, tests, and maintains software applications. Collaborates with teams to build scalable and efficient solutions across various platforms.",
         "required_skills": ["python", "java", "javascript", "c++", "c#", "ruby", "go", "data_structures", "algorithms",
-                            "git", "problem_solving", "api_design", "testing", "debugging", "agile_methodologies"],
-        "soft_skills_emphasis": ["teamwork", "communication", "analytical_thinking", "adaptability"],
+                            "git", "problem_solving", "api_design", "testing", "debugging", "agile_methodologies",
+                            "system_design"],
+        "soft_skills_emphasis": ["teamwork", "communication", "analytical_thinking", "adaptability",
+                                 "continuous_learning"],
         "avg_salary_range": "$90,000 - $170,000 USD",
         "common_next_steps": ["senior_software_engineer", "tech_lead", "engineering_manager", "solutions_architect",
                               "principal_engineer"],
         "learning_resources": {
-            "foundational": "CS50 (Harvard), freeCodeCamp (Full Stack Path)",
+            "foundational": "CS50 (Harvard), freeCodeCamp (Full Stack Path), The Odin Project",
             "python": "Official Python Docs, Real Python, 'Python Crash Course' (book)",
             "java": "Oracle Java Tutorials, Udemy: Java Programming Masterclass, 'Head First Java' (book)",
-            "javascript": "MDN Web Docs, Eloquent JavaScript (book), Traversy Media (YouTube)",
+            "javascript": "MDN Web Docs, Eloquent JavaScript (book), Traversy Media (YouTube), Frontend Masters",
             "data_structures_algorithms": "LeetCode, HackerRank, 'Cracking the Coding Interview' (book), 'Introduction to Algorithms' (CLRS)",
             "git": "Pro Git (book), Atlassian Git Tutorial, GitHub Learning Lab",
             "api_design": "REST API Design Rulebook (O'Reilly), Google API Design Guide, Postman Learning Center",
-            "testing": "pytest docs, JUnit docs, Jest/Mocha docs, 'Software Testing' (Ron Patton)",
+            "testing": "pytest docs, JUnit docs, Jest/Mocha docs, 'Software Testing' (Ron Patton), Kent C. Dodds (Testing JavaScript)",
             "agile": "Scrum Guide, Atlassian Agile Coach, 'Agile Estimating and Planning' (Mike Cohn)"
         },
         "interview_focus": ["Live coding (algorithms, data structures)", "System design (scalability, trade-offs)",
-                            "Behavioral questions (STAR method)", "Debugging scenarios"],
-        "example_projects": ["Develop a full-stack web application", "Build a mobile app",
-                             "Contribute to an open-source project", "Create a command-line tool with complex logic"]
+                            "Behavioral questions (STAR method)", "Debugging scenarios",
+                            "Knowledge of specific tech stack"],
+        "example_projects": ["Develop a full-stack web application (e.g., e-commerce site, social media clone)",
+                             "Build a mobile app (iOS or Android)", "Contribute to an open-source project",
+                             "Create a command-line tool with complex logic", "Develop a browser extension"]
     },
     "data_scientist": {
         "name": "Data Scientist",
-        "keywords": ["data scientist", "data analyst", "machine learning engineer", "ai specialist"],
-        "responsibilities_summary": "Collects, analyzes, and interprets large datasets to identify trends and insights. Develops machine learning models and communicates findings to stakeholders.",
-        "required_skills": ["python", "r", "sql", "machine_learning", "statistics", "data_visualization", "pandas",
-                            "numpy", "scikit-learn", "tensorflow", "pytorch", "communication", "big_data_technologies"],
-        "soft_skills_emphasis": ["critical_thinking", "problem_solving", "storytelling_with_data", "curiosity"],
+        "keywords": ["data scientist", "data analyst", "machine learning engineer", "ai specialist",
+                     "quantitative analyst"],
+        "responsibilities_summary": "Collects, analyzes, and interprets large datasets to identify trends and insights. Develops machine learning models, designs experiments, and communicates findings to stakeholders to drive decision-making.",
+        "required_skills": ["python", "r", "sql", "machine_learning", "deep_learning", "statistics", "probability",
+                            "data_visualization", "pandas", "numpy", "scikit-learn", "tensorflow", "pytorch",
+                            "communication", "big_data_technologies", "experiment_design"],
+        "soft_skills_emphasis": ["critical_thinking", "problem_solving", "storytelling_with_data", "curiosity",
+                                 "business_acumen"],
         "avg_salary_range": "$100,000 - $190,000 USD",
         "common_next_steps": ["senior_data_scientist", "lead_data_scientist", "ml_ops_engineer", "ai_researcher",
-                              "analytics_manager"],
+                              "analytics_manager", "head_of_data_science"],
         "learning_resources": {
-            "foundational": "Coursera: Machine Learning (Andrew Ng), Kaggle Learn",
-            "python_for_ds": "DataCamp, 'Python for Data Analysis' (Wes McKinney)",
+            "foundational": "Coursera: Machine Learning (Andrew Ng), Kaggle Learn, DataCamp/DataQuest",
+            "python_for_ds": "'Python for Data Analysis' (Wes McKinney), 'Applied Text Analysis with Python' (Benjamin Bengfort et al.)",
             "r": "R for Data Science (book/website), Swirl (interactive R package)",
-            "sql": "SQLZoo, Mode Analytics SQL Tutorial, LeetCode SQL",
-            "machine_learning": "fast.ai, 'Hands-On Machine Learning' (Aurélien Géron)",
-            "statistics": "Khan Academy Statistics, StatQuest (YouTube), 'The Elements of Statistical Learning' (book)",
-            "data_visualization": "Tableau Public, Seaborn/Matplotlib docs, 'Storytelling with Data' (Cole Knaflic)"
+            "sql": "SQLZoo, Mode Analytics SQL Tutorial, LeetCode SQL, 'SQL for Data Scientists' (Renee Teate)",
+            "machine_learning": "fast.ai, 'Hands-On Machine Learning' (Aurélien Géron), Stanford CS229",
+            "statistics": "Khan Academy Statistics, StatQuest (YouTube), 'The Elements of Statistical Learning' (book), MIT OpenCourseware Statistics",
+            "data_visualization": "Tableau Public, Seaborn/Matplotlib docs, 'Storytelling with Data' (Cole Knaflic), D3.js tutorials"
         },
-        "interview_focus": ["Statistical concepts and probability", "ML model intuition and implementation",
+        "interview_focus": ["Statistical concepts and probability",
+                            "ML model intuition, implementation, and evaluation",
                             "Data wrangling and cleaning (Python/R/SQL)", "Case studies and product sense",
-                            "Communicating complex results simply"],
-        "example_projects": ["Analyze a public dataset to uncover insights (e.g., Kaggle)",
-                             "Build a predictive model for a specific problem", "Create an interactive data dashboard",
-                             "Develop a recommendation system"]
+                            "Communicating complex results simply", "A/B testing and experimental design"],
+        "example_projects": ["Analyze a public dataset to uncover novel insights (e.g., Kaggle competition)",
+                             "Build a predictive model for a specific business problem (e.g., churn, fraud)",
+                             "Create an interactive data dashboard (e.g., using Plotly Dash, R Shiny, Tableau)",
+                             "Develop a recommendation system", "Perform causal inference analysis"]
     },
     "product_manager": {
         "name": "Product Manager",
-        "keywords": ["product manager", "pm", "product owner"],
-        "responsibilities_summary": "Defines product vision, strategy, and roadmap. Works with cross-functional teams (engineering, design, marketing) to build and launch successful products.",
-        "required_skills": ["market_research", "user_experience_design_principles", "agile_methodologies",
-                            "communication", "leadership", "data_analysis", "product_strategy",
-                            "stakeholder_management", "prioritization", "roadmapping"],
-        "soft_skills_emphasis": ["empathy", "strategic_thinking", "influence_without_authority", "decisiveness"],
+        "keywords": ["product manager", "pm", "product owner", "technical product manager"],
+        "responsibilities_summary": "Defines product vision, strategy, and roadmap. Works with cross-functional teams (engineering, design, marketing, sales) to build, launch, and iterate on successful products that meet user needs and business goals.",
+        "required_skills": ["market_research", "user_research", "user_experience_design_principles",
+                            "agile_methodologies", "scrum", "communication", "leadership", "data_analysis",
+                            "product_strategy", "stakeholder_management", "prioritization", "roadmapping",
+                            "a_b_testing_analysis", "product_analytics_tools"],
+        "soft_skills_emphasis": ["empathy", "strategic_thinking", "influence_without_authority", "decisiveness",
+                                 "collaboration", "storytelling"],
         "avg_salary_range": "$115,000 - $220,000 USD",
         "common_next_steps": ["senior_product_manager", "group_product_manager", "director_of_product", "vp_of_product",
-                              "entrepreneur"],
+                              "entrepreneur", "product_lead"],
         "learning_resources": {
-            "foundational": "Product School, 'Inspired' (Marty Cagan), 'Cracking the PM Interview' (Gayle McDowell)",
-            "market_research": "HubSpot Market Research Guide, Nielsen Norman Group (user research)",
-            "ux_principles": "'Don't Make Me Think' (Steve Krug), Laws of UX (website)",
-            "agile_pm": "Aha! Academy, 'User Story Mapping' (Jeff Patton)",
-            "data_analysis_for_pm": "Amplitude blog, Mixpanel resources, basic SQL/Excel skills",
-            "strategy": "Stratechery (Ben Thompson blog), 'Good Strategy Bad Strategy' (Richard Rumelt)"
+            "foundational": "Product School, 'Inspired' (Marty Cagan), 'Cracking the PM Interview' (Gayle McDowell), 'The Lean Product Playbook' (Dan Olsen)",
+            "market_research": "HubSpot Market Research Guide, Nielsen Norman Group (user research articles)",
+            "ux_principles": "'Don't Make Me Think' (Steve Krug), Laws of UX (website), 'About Face' (Alan Cooper)",
+            "agile_pm": "Aha! Academy, 'User Story Mapping' (Jeff Patton), Scrum.org resources",
+            "data_analysis_for_pm": "Amplitude blog, Mixpanel resources, basic SQL/Excel skills, Reforge programs",
+            "strategy": "Stratechery (Ben Thompson blog), 'Good Strategy Bad Strategy' (Richard Rumelt), Harvard Business Review"
         },
-        "interview_focus": ["Product sense (e.g., 'Design X for Y', 'Improve Z')",
-                            "Behavioral questions (leadership, collaboration)",
-                            "Estimation and prioritization questions", "Analytical and strategic thinking"],
-        "example_projects": ["Develop a product requirements document (PRD) for a new feature",
-                             "Conduct user interviews and synthesize findings", "Create a competitive analysis report",
-                             "Mockup a user flow for a mobile app"]
+        "interview_focus": ["Product sense (e.g., 'Design X for Y', 'Improve Z', 'Favorite product and why')",
+                            "Behavioral questions (leadership, collaboration, conflict resolution)",
+                            "Estimation and prioritization questions",
+                            "Analytical and strategic thinking (market sizing, competitive analysis)",
+                            "Technical understanding (for tech PM roles)"],
+        "example_projects": ["Develop a detailed product requirements document (PRD) or user stories for a new feature",
+                             "Conduct user interviews and synthesize findings into actionable insights",
+                             "Create a competitive analysis report for a product category",
+                             "Mockup a user flow and wireframes for a mobile app feature",
+                             "Define and track key product metrics (KPIs)"]
     },
+    "ux_ui_designer": {
+        "name": "UX/UI Designer",
+        "keywords": ["ux designer", "ui designer", "product designer", "interaction designer", "visual designer",
+                     "user experience designer", "user interface designer"],
+        "responsibilities_summary": "Focuses on creating user-centered designs by understanding business requirements, user needs, and technical limitations. Develops wireframes, prototypes, and high-fidelity visual designs for websites, apps, and other digital products.",
+        "required_skills": ["user_research_methods", "wireframing", "prototyping", "information_architecture",
+                            "interaction_design", "visual_design", "typography", "color_theory", "figma", "sketch",
+                            "adobe_xd", "usability_testing", "user_personas_journey_mapping"],
+        "soft_skills_emphasis": ["empathy", "communication", "collaboration", "problem_solving", "attention_to_detail",
+                                 "creativity", "receptiveness_to_feedback"],
+        "avg_salary_range": "$70,000 - $150,000 USD",
+        "common_next_steps": ["senior_ux_ui_designer", "lead_product_designer", "design_manager", "ux_researcher",
+                              "creative_director"],
+        "learning_resources": {
+            "foundational": "Nielsen Norman Group articles, Interaction Design Foundation (IDF) courses, Google UX Design Professional Certificate (Coursera)",
+            "ux_principles": "'The Design of Everyday Things' (Don Norman), 'Don't Make Me Think' (Steve Krug)",
+            "ui_visual_design": "'Refactoring UI' (Adam Wathan & Steve Schoger), Material Design Guidelines, Apple Human Interface Guidelines, Dribbble/Behance for inspiration",
+            "tools": "Figma Learn, Sketch App Tutorials, Adobe XD Tutorials",
+            "portfolio_building": "Bestfolios.com, 'Steal Like an Artist' (Austin Kleon)"
+        },
+        "interview_focus": ["Portfolio review (showcasing process and impact)",
+                            "Design thinking and problem-solving approach", "Whiteboard design challenges",
+                            "Explaining design decisions and rationale", "Collaboration and communication skills"],
+        "example_projects": ["Redesign an existing website or app with a focus on usability improvements",
+                             "Design a new mobile application from concept to high-fidelity prototype",
+                             "Conduct user research and create user personas and journey maps for a product",
+                             "Develop a design system or UI kit",
+                             "Create a detailed case study for each portfolio piece explaining the problem, process, and solution."]
+    },
+    "digital_marketing_specialist": {
+        "name": "Digital Marketing Specialist",
+        "keywords": ["digital marketing", "seo specialist", "sem specialist", "social media manager",
+                     "content marketer", "ppc analyst", "email marketing specialist"],
+        "responsibilities_summary": "Develops, implements, and manages marketing campaigns that promote a company and its products or services. Enhances brand awareness, drives web traffic, and acquires leads/customers through various digital channels like SEO, SEM, social media, and email.",
+        "required_skills": ["seo_principles_tools", "sem_ppc_platforms", "social_media_marketing_strategy",
+                            "email_marketing_automation", "content_creation_strategy",
+                            "data_analysis_marketing_metrics", "google_analytics", "marketing_automation_software",
+                            "copywriting_for_web", "basic_graphic_design_video_editing"],
+        "soft_skills_emphasis": ["creativity", "analytical_thinking", "communication", "adaptability",
+                                 "project_management", "customer_empathy"],
+        "avg_salary_range": "$60,000 - $110,000 USD",
+        "common_next_steps": ["marketing_manager", "seo_manager", "digital_marketing_strategist", "head_of_marketing",
+                              "growth_hacker"],
+        "learning_resources": {
+            "foundational": "Google Digital Garage (Fundamentals of Digital Marketing), HubSpot Academy (Inbound Marketing, Content Marketing), Coursera/Udemy courses on Digital Marketing",
+            "seo": "Moz Blog, Ahrefs Blog, Google Search Central, Backlinko",
+            "sem_ppc": "Google Ads Certification, WordStream PPC University, SEMrush Academy",
+            "social_media": "Hootsuite Academy, Sprout Social Blog, Facebook Blueprint, Buffer Blog",
+            "analytics": "Google Analytics Academy, CXL Institute (courses), Supermetrics Blog",
+            "email_marketing": "Mailchimp Academy, Campaign Monitor Blog, Litmus Blog"
+        },
+        "interview_focus": ["Campaign strategy and execution examples",
+                            "Knowledge of digital marketing tools and platforms (e.g., Google Ads, Facebook Ads Manager, GA4)",
+                            "Analytical skills (interpreting data, ROI calculation, A/B testing)",
+                            "Case studies on improving specific metrics (e.g., conversion rate, traffic)",
+                            "Understanding of current digital marketing trends and algorithm changes"],
+        "example_projects": ["Develop a comprehensive SEO audit and strategy for a small business website",
+                             "Create and present a mock social media campaign strategy for a product launch",
+                             "Analyze a marketing dataset to provide actionable insights and recommendations",
+                             "Write sample ad copy for different platforms and target audiences",
+                             "Outline an email marketing nurture sequence"]
+    },
+    "human_resources_manager": {
+        "name": "Human Resources Manager",
+        "keywords": ["hr manager", "human resources generalist", "talent acquisition manager", "hr business partner",
+                     "people operations manager"],
+        "responsibilities_summary": "Oversees recruitment and onboarding, employee relations, performance management, compensation and benefits administration, training and development programs, and ensures compliance with labor laws and company policies.",
+        "required_skills": ["recruitment_and_staffing_strategies", "employee_relations_conflict_resolution",
+                            "performance_management_systems", "compensation_and_benefits_design_administration",
+                            "employment_law_compliance_knowledge", "hris_human_resources_information_systems",
+                            "training_and_development_program_design", "change_management"],
+        "soft_skills_emphasis": ["communication_active_listening", "interpersonal_skills_relationship_building",
+                                 "empathy_emotional_intelligence", "problem_solving_decision_making",
+                                 "confidentiality_discretion", "leadership_influence",
+                                 "organizational_skills_time_management"],
+        "avg_salary_range": "$75,000 - $150,000 USD",
+        "common_next_steps": ["senior_hr_manager", "hr_director", "vp_of_hr", "chief_people_officer", "hr_consultant",
+                              "organizational_development_specialist"],
+        "learning_resources": {
+            "foundational": "SHRM Certification (SHRM-CP, SHRM-SCP), HRCI Certifications (PHR, SPHR), University HR programs or degrees",
+            "employment_law": "SHRM resources on compliance, Department of Labor website (country-specific), Legal updates from HR publications",
+            "recruitment": "LinkedIn Talent Blog, ERE.net, SHRM Talent Acquisition resources",
+            "employee_relations": "Books on conflict resolution and workplace mediation, Courses on difficult conversations",
+            "hr_technology": "HR Technologist magazine, Reviews of HRIS platforms (e.g., BambooHR, Workday)"
+        },
+        "interview_focus": [
+            "Scenario-based questions (handling employee issues, ethical dilemmas, legal compliance challenges)",
+            "Experience with various HR processes and systems (e.g., ATS, performance review software)",
+            "Leadership philosophy and management style", "Knowledge of current labor laws and HR best practices",
+            "Behavioral questions focused on empathy, fairness, and strategic problem-solving"],
+        "example_projects": ["Develop a proposal for a new employee wellness program",
+                             "Outline a strategy to improve employee retention by X%",
+                             "Create a training module for new managers on performance feedback",
+                             "Draft an updated employee handbook section on remote work policies",
+                             "Analyze HR metrics (e.g., turnover rate, time-to-hire) and suggest improvements"]
+    },
+    "graphic_designer": {
+        "name": "Graphic Designer",
+        "keywords": ["graphic artist", "visual designer", "brand designer", "communication_designer"],
+        "responsibilities_summary": "Creates visual concepts using computer software or by hand to communicate ideas that inspire, inform, and captivate consumers. Develops layouts and production designs for advertisements, brochures, websites, corporate reports, and other media.",
+        "required_skills": ["adobe_creative_suite_photoshop_illustrator_indesign", "typography_principles_application",
+                            "color_theory_psychology", "layout_composition_hierarchy", "visual_communication_strategy",
+                            "branding_identity_design", "illustration_skills", "digital_design_for_web_social",
+                            "print_production_knowledge", "user_interface_design_basics_optional"],
+        "soft_skills_emphasis": ["creativity_innovation", "attention_to_detail_precision",
+                                 "communication_articulating_design_choices", "time_management_meeting_deadlines",
+                                 "ability_to_take_and_give_constructive_criticism", "problem_solving_visual_challenges",
+                                 "adaptability_to_different_styles_media"],
+        "avg_salary_range": "$50,000 - $95,000 USD",
+        "common_next_steps": ["senior_graphic_designer", "art_director", "creative_director",
+                              "ux_designer_with_visual_focus", "freelance_design_business_owner", "brand_strategist"],
+        "learning_resources": {
+            "foundational": "Design school programs (BFA/MFA), Coursera/Skillshare/Udemy courses on Graphic Design, Books like 'Thinking with Type' (Ellen Lupton), 'Grid Systems in Graphic Design' (Josef Müller-Brockmann)",
+            "adobe_suite": "Adobe Creative Cloud Learn & Support, YouTube channels (e.g., Phlearn, Dansky, Satori Graphics)",
+            "typography": "Typewolf website, Fonts In Use, 'The Elements of Typographic Style' (Robert Bringhurst)",
+            "design_principles_inspiration": "Smashing Magazine, Designmodo, Dribbble, Behance, Awwwards",
+            "branding": "'Designing Brand Identity' (Alina Wheeler), Marty Neumeier books ('The Brand Gap', 'Zag')"
+        },
+        "interview_focus": ["Portfolio review (demonstrating range, skill, and thought process - most critical part)",
+                            "Explanation of design process and rationale behind specific design choices",
+                            "Understanding of fundamental design principles (balance, contrast, hierarchy etc.)",
+                            "Software proficiency (Adobe CC, Figma etc.)",
+                            "Ability to articulate design decisions, collaborate, and respond to feedback constructively"],
+        "example_projects": [
+            "Complete branding package for a fictional company (logo, color palette, typography, mockups)",
+            "Website or mobile app UI design project (showcasing user flow and visual design)",
+            "Editorial design for a magazine spread or book cover", "Social media campaign visuals",
+            "Packaging design concept"]
+    },
+    "teacher_educator": {
+        "name": "Teacher / Educator",
+        "keywords": ["teacher", "educator", "instructor", "professor", "k-12 teacher", "higher education faculty",
+                     "corporate trainer", "instructional designer"],
+        "responsibilities_summary": "Plans, prepares, and delivers instructional activities that facilitate active learning experiences. Develops curriculum, assesses student performance, and creates a supportive and engaging learning environment across various settings (K-12, higher ed, corporate).",
+        "required_skills": ["curriculum_development", "instructional_design_models_addiem",
+                            "classroom_management_or_training_facilitation", "assessment_and_evaluation_methods",
+                            "subject_matter_expertise", "differentiated_instruction_or_adult_learning_principles",
+                            "educational_technology_integration_lms",
+                            "communication_with_students_parents_colleagues_stakeholders",
+                            "learning_theories_pedagogy_andragogy"],
+        "soft_skills_emphasis": ["patience", "empathy", "communication_public_speaking", "adaptability_flexibility",
+                                 "passion_for_learning_and_teaching", "organizational_skills_planning",
+                                 "leadership_facilitation_skills", "creativity_in_instruction"],
+        "avg_salary_range": "$45,000 - $95,000 USD (K-12/Corp Training, varies greatly), $60,000 - $150,000+ (Higher Ed)",
+        "common_next_steps": ["lead_teacher_trainer", "department_head", "instructional_coordinator_designer",
+                              "school_administrator_principal_training_manager", "curriculum_specialist_developer",
+                              "educational_consultant", "university_tenure_track_professor"],
+        "learning_resources": {
+            "foundational": "Teacher certification programs (state-specific for K-12), Master's/Doctorate in Education or specific subject area, ATD (Association for Talent Development) for corporate trainers.",
+            "pedagogy_andragogy": "Journals like 'Educational Leadership', Books by authors like Parker Palmer, Bell Hooks, Malcolm Knowles, 'Understanding by Design' (Wiggins & McTighe)",
+            "classroom_management_facilitation": "Resources from Edutopia, ASCD, 'The First Days of School' (Harry Wong), ATD resources on facilitation",
+            "instructional_design": "ADDIE model resources, Merrill's Principles of Instruction, Cathy Moore's blog (action mapping)",
+            "educational_technology": "ISTE Standards, Google for Education resources, Common Sense Education, Articulate 360/Adobe Captivate tutorials (for e-learning development)"
+        },
+        "interview_focus": ["Teaching/training philosophy and methodology",
+                            "Sample lesson plan presentation or training module delivery (demo)",
+                            "Classroom/session management strategies",
+                            "Experience with curriculum/course development and assessment/evaluation",
+                            "Behavioral questions about handling challenging learners or situations",
+                            "Knowledge of educational/training standards and current issues in the field"],
+        "example_projects": [
+            "Develop a unit plan for a specific grade level/subject or a training program for a corporate skill",
+            "Create a portfolio of lesson plans/training materials and participant feedback/student work samples",
+            "Design an innovative assessment method or evaluation strategy",
+            "Present research on an educational topic or training methodology",
+            "Volunteer or gain experience in classroom settings or delivering workshops"]
+    }
 }
 
 
@@ -156,17 +342,17 @@ def get_user_profile(session_id: str) -> dict:
             'desired_role_key': row[2],
             'skills': json.loads(row[3]) if row[3] else [],
             'goals': json.loads(row[4]) if row[4] else [],
-            'current_stage': 'general_query',  # Default if loaded
-            'chat_topic': None  # e.g. 'skill_gap', 'resources'
+            'current_stage': 'general_query',
+            'chat_topic': None
         }
         try:
-            if row[5]:  # conversation_context
+            if row[5]:
                 context_from_db = json.loads(row[5])
-                data.update(context_from_db)  # Merge stored context
+                data.update(context_from_db)
         except json.JSONDecodeError:
             logger.warning(f"Could not parse conversation_context for session {session_id}")
 
-        USER_CONTEXT[session_id] = {'data': data, 'history_summary': ""}  # Placeholder for history summary
+        USER_CONTEXT[session_id] = {'data': data, 'history_summary': ""}
         return data
     return {'name': None, 'current_role': None, 'desired_role_key': None, 'skills': [], 'goals': [],
             'current_stage': 'greeting', 'chat_topic': None}
@@ -189,7 +375,6 @@ def update_user_profile(session_id: str, data: dict):
         json.dumps(data.get('goals', [])),
         json.dumps({k: v for k, v in data.items() if
                     k not in ['name', 'current_role', 'desired_role_key', 'skills', 'goals']}),
-        # Store only dynamic context
         session_id
     ))
     conn.commit()
@@ -203,7 +388,6 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
     response_metadata = {}
     msg_lower = user_message.lower().strip()
 
-    # --- Intent Recognition (Simplified) ---
     intent = "unknown"
     if user_profile['current_stage'] == 'greeting':
         intent = 'provide_name'
@@ -222,10 +406,8 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
     elif any(k in msg_lower for k in ["my name is", "call me"]) or (
             not user_profile.get('name') and len(msg_lower.split()) <= 3):
         intent = 'provide_name'
-    elif any(k in msg_lower for k in
-             ["software engineer", "data scientist", "product manager", "cybersecurity", "developer", "ux designer",
-              "cloud engineer"] + [item for sublist in [v['keywords'] for v in CAREER_PATHS.values()] for item in
-                                   sublist]):
+    elif any(k_word in msg_lower for path_data in CAREER_PATHS.values() for k_word in
+             path_data['keywords'] + [path_data['name'].lower()]):
         intent = 'discuss_role'
     elif any(k in msg_lower for k in ["skill", "skills", "what should i learn", "gap analysis"]):
         intent = 'skill_analysis'
@@ -235,7 +417,7 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
         intent = 'interview_prep'
     elif any(k in msg_lower for k in ["salary", "pay", "compensation"]):
         intent = 'salary_info'
-    elif any(k in msg_lower for k in ["projects", "portfolio", "examples"]):
+    elif any(k in msg_lower for k in ["projects", "portfolio", "examples", "accomplishments"]):
         intent = 'project_ideas'
     elif any(k in msg_lower for k in ["thank", "thanks", "cool", "ok", "got it"]):
         intent = 'acknowledge'
@@ -243,7 +425,6 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
     logger.info(
         f"Session {session_id}: Intent '{intent}', Stage '{user_profile['current_stage']}', Message '{user_message}'")
 
-    # --- Response Generation based on Intent & Context ---
     if intent == 'reset_conversation':
         user_profile = {'name': None, 'current_role': None, 'desired_role_key': None, 'skills': [], 'goals': [],
                         'current_stage': 'greeting', 'chat_topic': None}
@@ -258,11 +439,11 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
     elif intent == 'provide_name' or user_profile['current_stage'] == 'get_name':
         name_match = re.search(r"(?:my name is|call me|i am|i'm)\s*([a-zA-Z\s]+)", user_message, re.IGNORECASE)
         extracted_name = name_match.group(1).strip().title() if name_match else user_message.strip().title()
-        if "anonymous" in extracted_name.lower():
+        if "anonymous" in extracted_name.lower() or len(extracted_name) > 25 or not extracted_name.replace(' ',
+                                                                                                           '').isalpha():
             user_profile['name'] = "Explorer"
         else:
-            user_profile['name'] = extracted_name if len(extracted_name.split()) <= 3 and len(
-                extracted_name) < 25 else "Explorer"
+            user_profile['name'] = extracted_name
 
         response_content = f"Great to meet you, **{user_profile['name']}**! What is your current role or primary area of study?"
         user_profile['current_stage'] = 'get_current_role'
@@ -271,11 +452,22 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
     elif intent == 'provide_current_role' or user_profile['current_stage'] == 'get_current_role':
         user_profile['current_role'] = user_message.strip()
         response_content = (
-            f"Understood, {user_profile['current_role']}. Now, what career path are you most interested in exploring or pursuing? "
-            f"For example: `Software Engineer`, `Data Scientist`, `Product Manager`.")
+            f"Understood, {user_profile['current_role']}. Now, what career path are you most interested in exploring or pursuing? ")
+
+        all_role_keys = list(CAREER_PATHS.keys())
+        random.shuffle(all_role_keys)
+        quick_reply_options = [CAREER_PATHS[k]['name'] for k in all_role_keys[:3]]
+        if len(all_role_keys) > 3 and "Something else..." not in quick_reply_options:
+            quick_reply_options.append("Something else...")
+
+        response_content += f"For example: `{quick_reply_options[0]}`, `{quick_reply_options[1]}`"
+        if len(quick_reply_options) > 2 and quick_reply_options[2] != "Something else...":
+            response_content += f", or `{quick_reply_options[2]}`."
+        else:
+            response_content += "."
+
         user_profile['current_stage'] = 'get_desired_role'
-        response_metadata = {
-            'quick_replies': [CAREER_PATHS[k]['name'] for k in list(CAREER_PATHS.keys())[:3]] + ["Something else..."]}
+        response_metadata = {'quick_replies': quick_reply_options}
         response_type = "quick_reply_prompt"
         update_user_profile(session_id, user_profile)
 
@@ -283,11 +475,19 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
         'current_stage'] == 'get_desired_role':
         matched_key = None
         for key, path_data in CAREER_PATHS.items():
-            if msg_lower in path_data['keywords'] or msg_lower == path_data['name'].lower():
+            if msg_lower == path_data['name'].lower():
                 matched_key = key
                 break
-            if not matched_key and path_data['name'].lower() in msg_lower:
-                matched_key = key
+        if not matched_key:
+            for key, path_data in CAREER_PATHS.items():
+                if any(keyword in msg_lower for keyword in path_data['keywords']):
+                    matched_key = key
+                    break
+        if not matched_key:
+            for key, path_data in CAREER_PATHS.items():
+                if path_data['name'].lower() in msg_lower:
+                    matched_key = key
+                    break
 
         if matched_key:
             user_profile['desired_role_key'] = matched_key
@@ -301,57 +501,66 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
             user_profile['current_stage'] = 'general_query'
             response_metadata = {
                 'quick_replies': ["Analyze my skills for this role", "Learning resources", "Interview tips",
-                                  "Typical projects"]}
+                                  "Typical projects/accomplishments"]}
             response_type = "quick_reply_prompt"
         else:
             response_content = (
-                "I'm not familiar with that specific role in my current database. Could you try phrasing it differently, or choose from common paths like `Software Engineer`, `Data Scientist`, etc.? "
-                "Or, tell me more about it!")
+                "I'm not familiar with that specific role in my current database. Could you try phrasing it differently? "
+                "You can also ask to 'explore roles' to see a list of careers I know about.")
         update_user_profile(session_id, user_profile)
 
     elif intent == 'skill_analysis' or user_profile['current_stage'] == 'get_skills':
         if not user_profile.get('desired_role_key'):
             response_content = "To perform a skill gap analysis, I first need to know your target career path. What role are you aiming for?"
             user_profile['current_stage'] = 'get_desired_role'
-            response_metadata = {'quick_replies': [CAREER_PATHS[k]['name'] for k in list(CAREER_PATHS.keys())[:3]]}
+            all_role_keys = list(CAREER_PATHS.keys())
+            random.shuffle(all_role_keys)
+            response_metadata = {'quick_replies': [CAREER_PATHS[k]['name'] for k in all_role_keys[:3]]}
             response_type = "quick_reply_prompt"
         elif not user_profile.get('skills'):
             user_profile['current_stage'] = 'get_skills'
-            response_content = "Sure, I can help with that! Please list your current technical skills, separated by commas (e.g., Python, SQL, Communication)."
+            response_content = "Sure, I can help with that! Please list your current technical and soft skills, separated by commas (e.g., Python, Project Management, Communication)."
         else:
             role_key = user_profile['desired_role_key']
             role_info = CAREER_PATHS[role_key]
             role_name = role_info['name']
 
-            required = set(skill.lower().strip() for skill in role_info['required_skills'])
-            possessed = set(skill.lower().strip() for skill in user_profile.get('skills', []))
+            required_skills_normalized = set(
+                skill.lower().strip().replace("_", " ") for skill in role_info['required_skills'])
+            soft_skills_emphasis_normalized = set(
+                skill.lower().strip().replace("_", " ") for skill in role_info.get('soft_skills_emphasis', []))
+            all_target_skills = required_skills_normalized.union(soft_skills_emphasis_normalized)
 
-            missing_skills = sorted(list(required - possessed))
-            matching_skills = sorted(list(required.intersection(possessed)))
+            possessed_raw = user_profile.get('skills', [])
+            possessed_normalized = set(skill.lower().strip().replace("_", " ") for skill in possessed_raw)
+
+            missing_skills = sorted(list(all_target_skills - possessed_normalized))
+            matching_skills = sorted(list(all_target_skills.intersection(possessed_normalized)))
 
             analysis_parts = [
-                f"Okay, **{user_profile.get('name', 'Explorer')}**, here's a skill assessment for the **{role_name}** role based on your listed skills:"]
+                f"Okay, **{user_profile.get('name', 'Explorer')}**, here's a skill assessment for the **{role_name}** role based on your listed skills ({', '.join(possessed_raw)}):"]
 
             if matching_skills:
-                analysis_parts.append(
-                    f"\n### Strengths (Skills you have that match):\n- " + "\n- ".join(matching_skills))
+                analysis_parts.append(f"\n### Strengths (Skills you have that match):\n- " + "\n- ".join(
+                    skill.title() for skill in matching_skills))
             else:
                 analysis_parts.append(
-                    f"\nIt seems we haven't listed skills that directly match the core requirements for {role_name} yet. Let's identify them!")
+                    f"\nIt seems we haven't listed skills that directly match the core requirements or emphasized soft skills for {role_name} yet. Let's identify them!")
 
             if missing_skills:
                 analysis_parts.append(
-                    f"\n### Areas for Development (Key skills to acquire/strengthen):\n- " + "\n- ".join(
-                        missing_skills))
+                    f"\n### Areas for Development (Key skills to acquire/strengthen for {role_name}):\n- " + "\n- ".join(
+                        skill.title() for skill in missing_skills))
                 analysis_parts.append(f"\nI can suggest learning resources for these. What do you think?")
-                response_metadata = {
-                    'quick_replies': [f"Resources for {missing_skills[0]}" if missing_skills else "General resources",
-                                      "Tell me more about these skills", "Interview tips"]}
+                response_metadata = {'quick_replies': [
+                    f"Resources for {missing_skills[0].title()}" if missing_skills else "General resources",
+                    "Tell me more about these skills", "Interview tips"]}
                 response_type = "quick_reply_prompt"
             else:
                 analysis_parts.append(
                     f"\nBased on your listed skills and the core requirements for {role_name}, you have a strong foundation! Consider exploring advanced topics or specializations within {role_name}.")
-                response_metadata = {'quick_replies': ["Project ideas", "Next career steps", "Interview tips"]}
+                response_metadata = {
+                    'quick_replies': ["Project ideas/accomplishments", "Next career steps", "Interview tips"]}
                 response_type = "quick_reply_prompt"
 
             response_content = "\n".join(analysis_parts)
@@ -371,7 +580,9 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
         else:
             response_content = f"Got it. Your skills: {', '.join(updated_skills)}. What's your target career path for a skill analysis?"
             user_profile['current_stage'] = 'get_desired_role'
-            response_metadata = {'quick_replies': [CAREER_PATHS[k]['name'] for k in list(CAREER_PATHS.keys())[:3]]}
+            all_role_keys = list(CAREER_PATHS.keys())
+            random.shuffle(all_role_keys)
+            response_metadata = {'quick_replies': [CAREER_PATHS[k]['name'] for k in all_role_keys[:3]]}
             response_type = "quick_reply_prompt"
 
     elif intent == 'get_resources':
@@ -385,25 +596,25 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
             resources = role_info['learning_resources']
 
             specific_skill_query = None
-            for skill_key in resources.keys():
-                if skill_key.replace("_", " ") in msg_lower:
-                    specific_skill_query = skill_key
-                    break
-                elif skill_key in msg_lower:
-                    specific_skill_query = skill_key
+            for res_category_key in resources.keys():
+                if res_category_key.replace("_", " ") in msg_lower or res_category_key in msg_lower:
+                    specific_skill_query = res_category_key
                     break
 
-            if specific_skill_query:
+            if specific_skill_query and specific_skill_query in resources:
                 response_content = f"For **{specific_skill_query.replace('_', ' ').title()}** relevant to a **{role_name}**: {resources[specific_skill_query]}."
             else:
                 resource_list = [f"### Learning Resources for **{role_name}**:\n"]
-                for category, resource_desc in list(resources.items())[:5]:
-                    resource_list.append(f"- **{category.replace('_', ' ').title()}**: {resource_desc}")
+                if 'foundational' in resources:
+                    resource_list.append(f"- **Foundational**: {resources['foundational']}")
+                for category, resource_desc in list(resources.items()):
+                    if category != 'foundational' and len(resource_list) < 6:
+                        resource_list.append(f"- **{category.replace('_', ' ').title()}**: {resource_desc}")
                 response_content = "\n".join(resource_list)
-                response_content += "\n\nIs there a specific skill or area you'd like to focus on?"
+                response_content += "\n\nIs there a specific skill or area within this role you'd like to focus on?"
             user_profile['chat_topic'] = 'resources_provided'
             response_metadata = {
-                'quick_replies': ["More on foundational skills", "Interview prep", "Project ideas for this role"]}
+                'quick_replies': ["More on foundational skills", "Interview prep", f"Project ideas for {role_name}"]}
             response_type = "quick_reply_prompt"
         update_user_profile(session_id, user_profile)
 
@@ -426,12 +637,12 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
                 "- **Follow-Up**: Send a personalized thank-you email within 24 hours.",
                 f"\n### Specific Focus for **{role_name}** Interviews:",
                 "- " + "\n- ".join(role_info['interview_focus']),
-                "\nWould you like common behavioral questions, or example technical questions for this role?"
+                "\nWould you like common behavioral questions, or example technical/role-specific questions for this role?"
             ]
             response_content = "\n".join(tips)
             user_profile['chat_topic'] = 'interview_tips_provided'
             response_metadata = {
-                'quick_replies': ["Common behavioral questions", f"Technical questions for {role_name}",
+                'quick_replies': ["Common behavioral questions", f"Role-specific questions for {role_name}",
                                   "Resources for this role"]}
             response_type = "quick_reply_prompt"
         update_user_profile(session_id, user_profile)
@@ -448,21 +659,28 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
 
     elif intent == 'project_ideas':
         if not user_profile.get('desired_role_key'):
-            response_content = "For project ideas, which career path are you targeting?"
+            response_content = "For project ideas or example accomplishments, which career path are you targeting?"
             user_profile['current_stage'] = 'get_desired_role'
         else:
             role_key = user_profile['desired_role_key']
             role_info = CAREER_PATHS[role_key]
+            project_type_term = "projects"
+            if "manager" in role_key or "hr" in role_key or "teacher" in role_key or "educator" in role_key:
+                project_type_term = "accomplishments or key responsibilities"
+            elif "designer" in role_key:
+                project_type_term = "portfolio items"
+
             if 'example_projects' in role_info and role_info['example_projects']:
-                response_content = f"### Example Projects for a **{role_info['name']}**:\n- " + "\n- ".join(
+                response_content = f"### Example {project_type_term.capitalize()} for a **{role_info['name']}**:\n- " + "\n- ".join(
                     role_info['example_projects'])
-                response_content += "\n\nBuilding projects is a great way to learn and showcase your skills!"
+                response_content += f"\n\nBuilding relevant {project_type_term} is a great way to learn and showcase your skills!"
             else:
-                response_content = f"I don't have specific project examples for {role_info['name']} right now, but generally, look for projects that allow you to practice the core skills of the role and solve a real (even small) problem."
+                response_content = f"I don't have specific {project_type_term} for {role_info['name']} right now, but generally, look for experiences that allow you to practice the core skills of the role and solve a real (even small) problem or demonstrate key competencies."
         update_user_profile(session_id, user_profile)
 
     elif intent == 'get_help':
-        name_clause = f"{user_profile['name']}, " if user_profile.get('name') else ""
+        name_clause = f"{user_profile['name']}, " if user_profile.get('name') and user_profile[
+            'name'] != "Explorer" else ""
         options = [
             "Explore career paths (e.g., 'Tell me about Software Engineering')",
             "Get a skill gap analysis (e.g., 'Analyze my skills for Data Science')",
@@ -486,7 +704,8 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
                                                       f"More about {CAREER_PATHS[user_profile['desired_role_key']]['name']}")
 
     elif user_profile['current_stage'] == 'general_query' and intent == 'unknown':
-        name_clause = f"{user_profile.get('name', 'Explorer')}, " if user_profile.get('name') else ""
+        name_clause = f"{user_profile.get('name', 'Explorer')}, " if user_profile.get('name') and user_profile[
+            'name'] != "Explorer" else ""
         response_content = f"Hmm, I'm not sure how to respond to that, {name_clause}. You can ask me about career paths, skills, resources, or interview prep. Try 'help' for more options!"
         response_metadata = {'quick_replies': ["Help", "Explore career paths", "Skill gap analysis"]}
         response_type = "quick_reply_prompt"
@@ -500,9 +719,8 @@ def generate_ai_response(session_id: str, user_message: str) -> dict:
 
 
 # --- HTML, CSS, JS Content ---
-def generate_html_content(session_id=None):
+def generate_html_content(session_id=None, itemsContent=None):
     user_name = "Explorer"
-    desired_role_display = "Your Career Journey"
     initial_ai_message_obj = {
         "reply": "Hello! I'm IntelliCoach, your AI Career Advisor. It's wonderful to connect with you! To personalize our chat, what's your first name?",
         "type": "quick_reply_prompt", "metadata": {"quick_replies": ["I prefer to stay anonymous for now."]}}
@@ -511,8 +729,6 @@ def generate_html_content(session_id=None):
     if session_id:
         profile = get_user_profile(session_id)
         if profile.get('name'): user_name = profile['name']
-        if profile.get('desired_role_key') and profile['desired_role_key'] in CAREER_PATHS:
-            desired_role_display = f"Focus: {CAREER_PATHS[profile['desired_role_key']]['name']}"
 
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
@@ -533,8 +749,8 @@ def generate_html_content(session_id=None):
                 metadata_attr = ""
                 if metadata_json:
                     try:
-                        json.loads(metadata_json)
-                        metadata_attr = f"data-metadata='{escape_html(metadata_json)}'"
+                        parsed_meta = json.loads(metadata_json)
+                        metadata_attr = f"data-metadata='{escape_html(json.dumps(parsed_meta))}'"
                     except json.JSONDecodeError:
                         logger.error(f"Invalid metadata JSON in history: {metadata_json}")
 
@@ -669,13 +885,13 @@ def generate_html_content(session_id=None):
         .ai-message code {{ background-color: #d1d5db; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; font-size: 0.9em; }}
 
         .quick-replies-container {{
-            padding: 0.5rem 0 0; /* Adjusted padding */
+            padding: 0.5rem 0 0; 
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
             justify-content: flex-start; 
             margin-top: 0.5rem; 
-            margin-left: 0; /* Ensure it aligns with AI messages, not indented */
+            margin-left: 0; 
         }}
         .quick-reply-button {{
             background-color: #fff;
@@ -734,27 +950,19 @@ def generate_html_content(session_id=None):
         .chat-input-area button#sendButton:disabled {{ background-color: #cdd2d8; cursor: not-allowed; }}
         .chat-input-area button#sendButton svg {{ width: 22px; height: 22px; }}
 
-        .typing-indicator {{ /* This class is added to a .message.ai-message element now */
-            /* display: none;  Controlled by JS */
-            /* align-self: flex-start; Inherited from .message */
-            /* margin: 0.5rem 0 0; Inherited from .message gap */
+        .typing-indicator {{ 
         }}
-        .typing-indicator div {{ /* This is the inner div of the typing indicator message */
-            /* background-color: var(--ai-msg-bg); Inherited */
-            /* padding: 0.6rem 1rem; Overridden for typing dots */
-            padding: 0.8rem 1.1rem; /* Make it slightly different from normal message */
-            /* border-radius: var(--border-radius-msg); Inherited */
-            /* border-bottom-left-radius: 4px; Inherited */
-            /* box-shadow: var(--shadow-light); Inherited */
+        .typing-indicator div {{ 
+            padding: 0.8rem 1.1rem; 
             display: flex;
             align-items: center;
         }}
         .typing-indicator span {{
             display: inline-block;
-            width: 8px; height: 8px; margin: 0 3px; /* Adjusted margin */
+            width: 8px; height: 8px; margin: 0 3px; 
             background-color: #adb5bd;
             border-radius: 50%;
-            animation: typingAnimation 1.4s infinite both; /* Corrected animation name */
+            animation: typingAnimation 1.4s infinite both; 
         }}
         .typing-indicator span:nth-child(1) {{ animation-delay: 0s; }}
         .typing-indicator span:nth-child(2) {{ animation-delay: 0.2s; }}
@@ -763,11 +971,10 @@ def generate_html_content(session_id=None):
         @keyframes messageFadeIn {{
             to {{ opacity: 1; transform: translateY(0); }}
         }}
-        @keyframes typingAnimation {{ /* Corrected animation name */
+        @keyframes typingAnimation {{ 
             0%, 80%, 100% {{ transform: scale(0); opacity: 0.5; }}
             40% {{ transform: scale(1.0); opacity: 1; }}
         }}
-        /* Scrollbar styling */
         .chat-messages-area::-webkit-scrollbar {{ width: 8px; }}
         .chat-messages-area::-webkit-scrollbar-track {{ background: transparent; }}
         .chat-messages-area::-webkit-scrollbar-thumb {{ background: #ced4da; border-radius: 4px; }}
@@ -822,20 +1029,40 @@ def generate_html_content(session_id=None):
         function renderClientMarkdown(md) {{
             if (typeof md !== 'string') return md;
             let html = escapeHtml(md); 
+            // Bold
             html = html.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
                        .replace(/__([^_]+)__/g, '<strong>$1</strong>');
-            html = html.replace(/(?<!\\*)\\*(?!\\*)([^\\*]+)(?<!\\*)\\*(?!\\*)/g, '<em>$1</em>')
-                       .replace(/(?<!_)_{1}(?!_)([^_]+)(?<!_)_{1}(?!_)/g, '<em>$1</em>');
+            // Italics - carefully to avoid parts of bold
+            html = html.replace(/(?<![a-zA-Z0-9*])\\*(?!\\s|\\*)([^\\*\\n]+?)(?<!\\s|\\*)\\*(?![a-zA-Z0-9*])/g, '<em>$1</em>')
+                       .replace(/(?<![a-zA-Z0-9_])_(?!\\s|_)([^_\\n]+?)(?<!\\s|_)_(?![a-zA-Z0-9_])/g, '<em>$1</em>');
 
+            // Headers
             html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
 
-            html = html.replace(/^[-*]\s+(.*$)/gim, '<li>$1</li>');
-            html = html.replace(/(<li>.+?<\/li>)/gs, '<ul>$1</ul>').replace(/<\/ul>\s*<ul>/gs, '');
+            // Lists
+            html = html.replace(/^[-*+]\s+(.*$)/gim, '<li>$1</li>');
 
+            // Function to wrap list items; Python's f-string requires {{ and }} for literal braces.
+            // For JavaScript template literals `${{var}}`, the dollar sign is literal, and {{var}} produces {var}.
+            function clientWrapListItems(match) {{
+                let itemsContent = match.replace(/<\\/li>\\s*(<br\\s*\\/?>\\s*)+\\s*<li>/gi, '</li><li>'); // Use escaped slash for Python f-string
+                itemsContent = itemsContent.replace(/^\\s*(<br\\s*\\/?>\\s*)+|(<br\\s*\\/?>\\s*)+\\s*$/g, '');
+                return `<ul>${{itemsContent}}</ul>`; // Corrected for Python f-string: ${{itemsContent}} -> ${itemsContent} in JS
+            }}
+            html = html.replace(/(?:<li>.*?<\\/li>\\s*(?:<br\\s*\\/?>\\s*)*)+/gs, clientWrapListItems); // Use escaped slash
 
-            html = html.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+            // Links
+            html = html.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'); // Escaped \ and ( )
+            // Code
             html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            html = html.replace(/\\n/g, '<br>');
+            // Newlines
+            html = html.replace(/\\n/g, '<br>'); // Escaped \
+
+            // Cleanup <br> tags
+            html = html.replace(/<ul>(<br\\s*\\/?>\\s*)+/g, '<ul>');
+            html = html.replace(/(<br\\s*\\/?>\\s*)+<\\/ul>/g, '</ul>'); // Escaped /
+            html = html.replace(/<li>(<br\\s*\\/?>\\s*)+/g, '<li>');
+            html = html.replace(/(<br\\s*\/?>\\s*)+<\\/li>/g, '</li>'); // Escaped /
             return html;
         }}
 
@@ -861,7 +1088,9 @@ def generate_html_content(session_id=None):
         }}
 
         function addMessageToChat(content, sender, type = 'text', metadata = null) {{
-            removeAllQuickReplies(); // Remove any previous quick replies first
+            if (sender === 'user' || (sender === 'ai' && (!metadata || !metadata.quick_replies))) {{
+                 removeAllQuickReplies(); 
+            }}
 
             const messageWrapper = document.createElement('div');
             messageWrapper.classList.add('message', sender + '-message');
@@ -985,7 +1214,7 @@ def generate_html_content(session_id=None):
 
         function processInitialMessagesForQuickReplies() {{
             const aiMessages = Array.from(chatMessagesArea.querySelectorAll('.message.ai-message'));
-            const lastAIMessage = aiMessages.pop(); // Get the last AI message
+            const lastAIMessage = aiMessages.pop(); 
 
             if (lastAIMessage) {{
                 const type = lastAIMessage.dataset.type;
@@ -1037,34 +1266,28 @@ def render_markdown(text: str) -> str:
     html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html)
     html = re.sub(r'__(.*?)__', r'<strong>\1</strong>', html)
 
-    # Corrected Italic regex to avoid conflict with bold and handle cases like *word* vs. **word**
-    html = re.sub(r'(?<!\*)\*(?!\s)(?!\*)([^\*\n]+?)(?<!\s)\*(?!\*)', r'<em>\1</em>', html)
-    html = re.sub(r'(?<!_)_(?!\s)(?!_)([^_\n]+?)(?<!\s)_(?!_)', r'<em>\1</em>', html)
+    html = re.sub(r'(?<![a-zA-Z0-9*])\*(?!\s|\*)([^\*\n]+?)(?<!\s|\*)\*(?![a-zA-Z0-9*])', r'<em>\1</em>', html)
+    html = re.sub(r'(?<![a-zA-Z0-9_])_(?!\s|_)([^_\n]+?)(?<!\s|_)_(?![a-zA-Z0-9_])', r'<em>\1</em>', html)
 
-    # Unordered lists: Convert each item, then wrap blocks of <li>
-    # Step 1: Convert individual list items
     html = re.sub(r'^\s*[-*+]\s+(.*)', r'<li>\1</li>', html, flags=re.MULTILINE)
 
-    # Step 2: Wrap consecutive <li> elements in <ul> tags
-    # This regex finds blocks of <li>...</li> and wraps them.
-    # It handles cases where lists might be separated by other content.
-    def wrap_list_items(match_obj):
-        list_items = match_obj.group(0)
-        return f"<ul>{list_items}</ul>"
+    def wrap_list_items_server(match_obj):
+        list_items_content = match_obj.group(0)
+        cleaned_content = re.sub(r'</li>\s*(?:<br\s*\/?>\s*)+\s*<li>', '</li><li>', list_items_content)
+        cleaned_content = re.sub(r'^\s*(<br\s*\/?>\s*)+', '', cleaned_content)
+        cleaned_content = re.sub(r'(<br\s*\/?>\s*)+\s*$', '', cleaned_content)
+        return f"<ul>{cleaned_content}</ul>"
 
-    html = re.sub(r'(?:<li>.*?</li>\s*)+', wrap_list_items, html, flags=re.DOTALL)
+    html = re.sub(r'(?:<li>.*?</li>\s*(?:<br\s*\/?>\s*)*)+', wrap_list_items_server, html, flags=re.DOTALL)
 
     html = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<a href="\2" target="_blank" rel="noopener noreferrer">\1</a>', html)
     html = re.sub(r'`([^`]+)`', r'<code>\1</code>', html)
     html = html.replace("\n", "<br>")
 
-    # Cleanup <br> inside list structures that might have been added if input had newlines
-    html = re.sub(r'<ul><br>', '<ul>', html)
-    html = re.sub(r'<br></ul>', '</ul>', html)
-    html = re.sub(r'<li><br>', '<li>', html)
-    html = re.sub(r'<br></li>', '</li>', html)
-    html = re.sub(r'<br>\s*<li>', '<li>', html)  # <br> then <li>
-    html = re.sub(r'</li><br>\s*</ul>', '</li></ul>', html)  # </li> then <br> then </ul>
+    html = re.sub(r'<ul><br\s*\/?>', '<ul>', html)
+    html = re.sub(r'<br\s*\/?></ul>', '</ul>', html)
+    html = re.sub(r'<li><br\s*\/?>', '<li>', html)
+    html = re.sub(r'<br\s*\/?></li>', '</li>', html)
 
     return html
 
@@ -1187,5 +1410,7 @@ class UserSessionManager:
 if __name__ == "__main__":
     logger.info("Initializing IntelliCoach Pro...")
     init_db()
-    logger.info(f"Starting IntelliCoach Pro server on http://127.0.0.1:8000")
-    uvicorn.run("coach:app", host="127.0.0.1", port=8000, reload=True)  # Assuming filename is coach.py
+    module_name = __file__.replace(".py", "").split("/")[-1].split("\\")[-1]
+    logger.info(f"Starting IntelliCoach Pro server on http://127.0.0.1:8000 "
+                f"(running '{module_name}:app' with uvicorn)")
+    uvicorn.run(f"{module_name}:app", host="127.0.0.1", port=8000, reload=True)
