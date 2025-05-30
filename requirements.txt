@@ -1,0 +1,3 @@
+fastapi
+uvicorn[standard] # Uvicorn is needed for @vercel/python to serve FastAPI
+# Add any other dependencies you might have introduced
