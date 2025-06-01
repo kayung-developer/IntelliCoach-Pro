@@ -320,13 +320,17 @@ def init_db():
     logger.info("Database initialized successfully.")
 
 
-app = FastAPI()
+app = FastAPI() # THIS IS YOUR MAIN APP INSTANCE FOR VERCEL
 
 
 # --- AI Response Logic ---
 def get_user_profile(session_id: str) -> dict:
-    if session_id in USER_CONTEXT:
+    # Consider if USER_CONTEXT is truly beneficial here if each request is isolated
+    # It might be simpler to always fetch from DB if instances don't share USER_CONTEXT
+    if session_id in USER_CONTEXT and USER_CONTEXT[session_id].get('data'): # Check if data exists
+        logger.info(f"Cache hit for session {session_id} in USER_CONTEXT")
         return USER_CONTEXT[session_id]['data']
+    logger.info(f"Cache miss or no data for session {session_id} in USER_CONTEXT, fetching from DB.")
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -357,10 +361,13 @@ def get_user_profile(session_id: str) -> dict:
         return data
     return {'name': None, 'current_role': None, 'desired_role_key': None, 'skills': [], 'goals': [],
             'current_stage': 'greeting', 'chat_topic': None}
+    USER_CONTEXT[session_id] = {'data': default_data.copy(), 'history_summary': ""} # Populate cache with default
+    return default_data
 
 
 def update_user_profile(session_id: str, data: dict):
     USER_CONTEXT.setdefault(session_id, {'data': {}, 'history_summary': ""})['data'].update(data)
+    logger.info(f"Updated USER_CONTEXT for {session_id}")
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -380,6 +387,8 @@ def update_user_profile(session_id: str, data: dict):
     ))
     conn.commit()
     conn.close()
+    logger.info(f"Updated user profile in DB for {session_id}")
+
 
 
 def generate_ai_response(session_id: str, user_message: str) -> dict:
@@ -1302,6 +1311,7 @@ def escape_html(unsafe_text: str) -> str:
 # --- FastAPI Endpoints ---
 @app.on_event("startup")
 async def startup_event():
+     logger.info("FastAPI application startup...")
     init_db()
 
 
@@ -1409,7 +1419,9 @@ class UserSessionManager:
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    logger.info("Initializing IntelliCoach Pro...")
+     logger.info("Initializing IntelliCoach Pro for LOCAL development...")
+    # Ensure local DB_NAME is set correctly if different from /tmp/
+    # e.g., DB_NAME = "career_coach.db" # if you uncomment this at the top for local
     init_db()
     module_name = __file__.replace(".py", "").split("/")[-1].split("\\")[-1]
     logger.info(f"Starting IntelliCoach Pro server on http://127.0.0.1:8000 "
