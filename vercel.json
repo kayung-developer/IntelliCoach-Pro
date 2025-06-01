@@ -7,6 +7,6 @@
     }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "coach.py" }
+    { "src": "/(.*)", "dest": "src/coach.py" }
   ]
 }
