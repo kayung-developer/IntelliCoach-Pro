@@ -8,10 +8,9 @@ import datetime
 import re
 import logging
 import random
-from flask import Flask
 
 from numpy import var
-app = Flask(__name__)
+
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
