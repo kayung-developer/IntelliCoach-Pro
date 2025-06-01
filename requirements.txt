@@ -1,3 +1,4 @@
 fastapi
 uvicorn[standard] # Uvicorn is needed for @vercel/python to serve FastAPI
-# Add any other dependencies you might have introduced
+Flask==2.3.2
+gunicorn==20.1.0
