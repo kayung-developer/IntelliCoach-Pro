@@ -10,7 +10,7 @@ import logging
 import random
 
 from numpy import var
-
+app = Flask(__name__)
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
