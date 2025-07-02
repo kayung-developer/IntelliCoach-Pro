@@ -11,8 +11,9 @@ IntelliCoach Pro is a FastAPI-based web application designed to act as an AI-pow
 
 <!-- TODO: Add a GIF or screenshot of the chat interface in action! -->
 <!-- Example: (Replace with your actual GIF/Screenshot) -->
-<p align="center"><img src="https://github.com/kayung-developer/IntelliCoach-Pro/blob/main/Screenshot%20(58).png" alt="IntelliCoach Pro Demo" width="700"></p>
-<p align="center"><img src="https://github.com/kayung-developer/IntelliCoach-Pro/blob/main/Screenshot%20(59).png" alt="IntelliCoach Pro Demo" width="700"></p>
+<p align="center"><img src="https://github.com/kayung-developer/IntelliCoach-Pro/blob/main/Screenshot%20(58).png" alt="" width="700"></p>
+<p align="center"><img src="https://github.com/kayung-developer/IntelliCoach-Pro/blob/main/Screenshot%20(61).png" alt="" width="700"></p>
+<p align="center"><img src="https://github.com/kayung-developer/IntelliCoach-Pro/blob/main/Screenshot%20(62).png" alt="" width="700"></p>
 <!-- Consider using tools like LICEcap (Windows/macOS), Kap (macOS), or ScreenToGif (Windows) to create a short demo GIF. -->
 
 ## 🚀 Key Features
